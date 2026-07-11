@@ -105,7 +105,7 @@ export function useSensorData(interval = 3000) {
       const json = await res.json()
       
       // Simular temperatura real con ligera fluctuación (+- 0.3°C)
-      const currentTemp = baseTemp + (Math.random() * 0.6 - 0.3);
+      const currentTemp = baseTemp - 7.5 + (Math.random() * 0.6 - 0.3);
       
       // Voltaje y corriente reales solo cuando la bomba/ionizador están prendidos
       const isWatering = systemStatus.pump;
@@ -138,7 +138,7 @@ export function useSensorData(interval = 3000) {
       }
     } catch {
       // Si el servidor falla
-      const currentTemp = baseTemp + (Math.random() * 0.6 - 0.3);
+      const currentTemp = baseTemp - 7.5 + (Math.random() * 0.6 - 0.3);
       const isWatering = systemStatus.pump;
       const currentVolt = isWatering ? 12.0 + (Math.random() * 0.4 - 0.2) : 0;
       const currentAmps = isWatering ? 2.5 + (Math.random() * 0.2 - 0.1) : 0;

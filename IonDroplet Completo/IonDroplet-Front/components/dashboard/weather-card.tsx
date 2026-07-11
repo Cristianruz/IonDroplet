@@ -4,9 +4,11 @@ import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { Cloud, Sun, CloudRain, CloudLightning, CloudSnow, Wind, Droplets, Thermometer, ArrowUpDown, MapPin } from "lucide-react"
+import Map, { Marker, NavigationControl } from 'react-map-gl/mapbox'
+import 'mapbox-gl/dist/mapbox-gl.css'
 
-const LAT = 28.6353
-const LON = -106.0889
+const LAT = 28.7087946
+const LON = -106.1028420
 const CITY = "Chihuahua"
 const STATE = "Chihuahua"
 const COUNTRY = "México"
@@ -84,8 +86,6 @@ export function WeatherCard({ interiorTemp, interiorHumidity }: WeatherCardProps
   const humidityDiff = weather ? interiorHumidity - weather.humidity : 0
   const needsIonization = humidityDiff > 10
 
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${LON - 0.05}%2C${LAT - 0.05}%2C${LON + 0.05}%2C${LAT + 0.05}&layer=mapnik&marker=${LAT}%2C${LON}`
-
   if (loading) {
     return (
       <Card className="border-border bg-card">
@@ -135,13 +135,17 @@ export function WeatherCard({ interiorTemp, interiorHumidity }: WeatherCardProps
 
         {/* Mapa */}
         <div className="overflow-hidden rounded-lg border border-border" style={{ height: '140px' }}>
-          <iframe
-            src={mapUrl}
-            width="100%"
-            height="140"
-            style={{ border: 'none', display: 'block' }}
-            title="Ubicación del terreno"
-          />
+          <Map
+            initialViewState={{ longitude: LON, latitude: LAT, zoom: 13 }}
+            style={{ width: '100%', height: '140px' }}
+            mapStyle="mapbox://styles/mapbox/dark-v11"
+            mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+          >
+            <NavigationControl position="top-right" />
+            <Marker longitude={LON} latitude={LAT} anchor="bottom">
+              <MapPin className="h-5 w-5 text-primary" />
+            </Marker>
+          </Map>
         </div>
 
         {/* Datos exteriores */}

@@ -54,7 +54,7 @@ export default function Dashboard() {
         systemPower={systemStatus.power}
         onTogglePower={togglePower}
         pumpState={systemStatus.pump}
-        onTogglePump={togglePump}
+        onTogglePump={() => { togglePump(); toggleIonization() }}
         lastUpdate={sensorData.timestamp}
       />
 

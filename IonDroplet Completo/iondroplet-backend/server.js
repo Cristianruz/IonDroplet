@@ -20,11 +20,14 @@ let espSettings = {
 };
 
 let db;
+let port; // <-- declarado aquí para que las rutas lo puedan usar
+
 (async () => {
   db = await open({
     filename: './iondroplet.db',
     driver: sqlite3.Database
   });
+
   await db.exec(`
     CREATE TABLE IF NOT EXISTS sensor_readings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,25 +62,24 @@ let db;
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
   console.log("✅ Base de datos SQLite (iondroplet.db) inicializada correctamente.");
-})();
 
-// --- CONFIGURACIÓN DE PUERTO SERIAL ---
-const SERIAL_PORT_NAME = 'COM12'; 
-let port;
+  // --- CONFIGURACIÓN DE PUERTO SERIAL ---
+  // Se inicializa DESPUÉS de la DB para evitar race condition
+  const SERIAL_PORT_NAME = 'COM5';
 
-try {
-  port = new SerialPort({ path: SERIAL_PORT_NAME, baudRate: 115200 })
-  const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }))
+  try {
+    port = new SerialPort({ path: SERIAL_PORT_NAME, baudRate: 115200 })
+    const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }))
 
-  parser.on('data', async (line) => {
-    try {
-      const data = JSON.parse(line.trim());
-      if (data.humedad !== undefined) {
-        
-        console.log(`✅ [USB] Humedad recibida del ESP32: ${data.humedad}%`);
+    parser.on('data', async (line) => {
+      try {
+        const data = JSON.parse(line.trim());
+        if (data.humedad !== undefined) {
 
-        if (db) {
+          console.log(`✅ [USB] Humedad recibida del ESP32: ${data.humedad}%`);
+
           try {
             await db.run(
               'INSERT INTO sensor_readings (humidity, device_id) VALUES (?, ?)',
@@ -88,38 +90,40 @@ try {
           }
 
           if (espSettings.autoMode) {
-              let limite = 40;
-              try {
-                const row = await db.get('SELECT * FROM thresholds ORDER BY id DESC LIMIT 1')
-                if (row && row.hum_max) {
-                   limite = row.hum_max;
-                }
-              } catch (dbErr) {
-                console.error("DB Error on Select threshold:", dbErr.message);
+            let limite = 40;
+            try {
+              const row = await db.get('SELECT * FROM thresholds ORDER BY id DESC LIMIT 1')
+              if (row && row.hum_max) {
+                limite = row.hum_max;
               }
-              
-              espSettings.pumpState = (data.humedad < limite) ? 1 : 0;
+            } catch (dbErr) {
+              console.error("DB Error on Select threshold:", dbErr.message);
+            }
+
+            espSettings.pumpState = (data.humedad < limite) ? 1 : 0;
           }
+
+          port.write(`BOMBA:${espSettings.pumpState}\n`);
         }
-
-        port.write(`BOMBA:${espSettings.pumpState}\n`);
+      } catch (e) {
+        // Ignorar líneas que no sean JSON
       }
-    } catch (e) {
-      // Ignorar líneas que no sean JSON
-    }
-  });
+    });
 
-  port.on('open', () => {
-    console.log(`🔌 [USB] ¡Conectado exitosamente al puerto ${SERIAL_PORT_NAME}! Escuchando al ESP32...`);
-  });
+    port.on('open', () => {
+      console.log(`🔌 [USB] ¡Conectado exitosamente al puerto ${SERIAL_PORT_NAME}! Escuchando al ESP32...`);
+    });
 
-  port.on('error', (err) => {
-    console.log('❌ Error en puerto serial:', err.message);
-  });
-} catch (e) {
-  console.log('❌ No se pudo inicializar el puerto serial:', e.message);
-}
-// --------------------------------------
+    port.on('error', (err) => {
+      console.log('❌ Error en puerto serial:', err.message);
+    });
+
+  } catch (e) {
+    console.log('❌ No se pudo inicializar el puerto serial:', e.message);
+  }
+  // --------------------------------------
+
+})();
 
 const SECRET = process.env.JWT_SECRET
 
@@ -285,7 +289,7 @@ Responde SOLO en este formato JSON sin texto adicional:
 
 app.post('/api/esp/data', async (req, res) => {
   const { humedad, bomba, ionizador, device_id, ip } = req.body
-  
+
   if (ip) {
     espSettings.espIp = ip;
   }
@@ -299,17 +303,17 @@ app.post('/api/esp/data', async (req, res) => {
     let commandBomba = espSettings.pumpState;
 
     if (espSettings.autoMode) {
-        const row = await db.get('SELECT * FROM thresholds ORDER BY id DESC LIMIT 1')
-        const thresholds = row || { hum_max: 40 }
-        
-        let limite = thresholds.hum_max ? thresholds.hum_max : 40;
-        
-        if (humedad < limite) {
-           commandBomba = 1;
-        } else {
-           commandBomba = 0;
-        }
-        espSettings.pumpState = commandBomba;
+      const row = await db.get('SELECT * FROM thresholds ORDER BY id DESC LIMIT 1')
+      const thresholds = row || { hum_max: 40 }
+
+      let limite = thresholds.hum_max ? thresholds.hum_max : 40;
+
+      if (humedad < limite) {
+        commandBomba = 1;
+      } else {
+        commandBomba = 0;
+      }
+      espSettings.pumpState = commandBomba;
     }
 
     res.json({ success: true, auto_mode: espSettings.autoMode, bomba: commandBomba })
@@ -319,31 +323,31 @@ app.post('/api/esp/data', async (req, res) => {
 })
 
 app.post('/api/esp/control', async (req, res) => {
-  const { bomba, autoMode } = req.body; 
-  
+  const { bomba, autoMode } = req.body;
+
   if (autoMode !== undefined) {
-      espSettings.autoMode = (autoMode === true || autoMode === 'true' || autoMode === 1);
+    espSettings.autoMode = (autoMode === true || autoMode === 'true' || autoMode === 1);
   }
-  
+
   if (bomba !== undefined && !espSettings.autoMode) {
-      espSettings.pumpState = (bomba === true || bomba === 'true' || bomba === 1) ? 1 : 0;
+    espSettings.pumpState = (bomba === true || bomba === 'true' || bomba === 1) ? 1 : 0;
   }
 
   if (port && port.isOpen) {
-      port.write(`BOMBA:${espSettings.pumpState}\n`);
+    port.write(`BOMBA:${espSettings.pumpState}\n`);
   }
 
   if (espSettings.espIp) {
-      try {
-          const response = await fetch(`http://${espSettings.espIp}/control`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: new URLSearchParams({ bomba: espSettings.pumpState })
-          });
-          await response.text();
-      } catch (e) {
-          console.log("Aviso: No se pudo contactar al ESP32 directamente:", e.message);
-      }
+    try {
+      const response = await fetch(`http://${espSettings.espIp}/control`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ bomba: espSettings.pumpState })
+      });
+      await response.text();
+    } catch (e) {
+      console.log("Aviso: No se pudo contactar al ESP32 directamente:", e.message);
+    }
   }
 
   res.json({ success: true, settings: espSettings });

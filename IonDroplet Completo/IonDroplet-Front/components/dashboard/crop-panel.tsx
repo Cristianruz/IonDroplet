@@ -228,21 +228,42 @@ Responde SOLO en este formato JSON sin texto adicional:
               const health = getHealth()
               const color = health >= 70 ? "#22c55e" : health >= 40 ? "#f59e0b" : "#ef4444"
               const label = health >= 70 ? "Óptimo" : health >= 40 ? "En riesgo" : "Crítico"
-              const angle = -90 + (health / 100) * 180
+              const angle = -180 + (health / 100) * 180
+              const L = Math.PI * 75
+              const nx = 90 + 60 * Math.cos((angle * Math.PI) / 180)
+              const ny = 90 + 60 * Math.sin((angle * Math.PI) / 180)
+              const sepAt = (pct: number) => {
+                const a = (-180 + pct * 180) * Math.PI / 180
+                return { x1: 90 + 67 * Math.cos(a), y1: 90 + 67 * Math.sin(a), x2: 90 + 83 * Math.cos(a), y2: 90 + 83 * Math.sin(a) }
+              }
+              const s40 = sepAt(0.4), s70 = sepAt(0.7)
               return (
                 <div className="rounded-xl border border-border bg-card p-6 text-center">
-                  <p className="text-xs font-medium text-muted-foreground mb-4">Salud del cultivo</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Salud del cultivo</p>
                   <div className="flex justify-center">
-                    <svg width="180" height="100" viewBox="0 0 180 100">
-                      <path d="M 15 90 A 75 75 0 0 1 165 90" fill="none" stroke="#1f2937" strokeWidth="16" strokeLinecap="round" />
-                      <path d="M 15 90 A 75 75 0 0 1 165 90" fill="none" stroke={color} strokeWidth="16" strokeLinecap="round" strokeDasharray={`${(health / 100) * 236} 236`} />
-                      <line x1="90" y1="90" x2={90 + 62 * Math.cos((angle * Math.PI) / 180)} y2={90 + 62 * Math.sin((angle * Math.PI) / 180)} stroke={color} strokeWidth="3" strokeLinecap="round" />
-                      <circle cx="90" cy="90" r="5" fill={color} />
-                      <text x="90" y="76" textAnchor="middle" fill={color} fontSize="22" fontWeight="bold" fontFamily="monospace">{health}%</text>
+                    <svg width="180" height="130" viewBox="0 0 180 130">
+                      {/* Track base */}
+                      <path d="M 15 90 A 75 75 0 0 1 165 90" fill="none" stroke="#1e293b" strokeWidth="18" strokeLinecap="round" />
+                      {/* Zone tints */}
+                      <path d="M 15 90 A 75 75 0 0 1 165 90" fill="none" stroke="#ef4444" strokeWidth="18" strokeLinecap="butt" strokeDasharray={`${0.4 * L} ${L}`} opacity="0.25" />
+                      <path d="M 15 90 A 75 75 0 0 1 165 90" fill="none" stroke="#f59e0b" strokeWidth="18" strokeLinecap="butt" strokeDasharray={`${0.3 * L} ${L}`} strokeDashoffset={`${-0.4 * L}`} opacity="0.25" />
+                      <path d="M 15 90 A 75 75 0 0 1 165 90" fill="none" stroke="#22c55e" strokeWidth="18" strokeLinecap="butt" strokeDasharray={`${0.3 * L} ${L}`} strokeDashoffset={`${-0.7 * L}`} opacity="0.25" />
+                      {/* Active progress */}
+                      <path d="M 15 90 A 75 75 0 0 1 165 90" fill="none" stroke={color} strokeWidth="18" strokeLinecap="round" strokeDasharray={`${(health / 100) * L} ${L}`} />
+                      {/* Zone separators */}
+                      <line x1={s40.x1} y1={s40.y1} x2={s40.x2} y2={s40.y2} stroke="rgba(255,255,255,0.25)" strokeWidth="2.5" />
+                      <line x1={s70.x1} y1={s70.y1} x2={s70.x2} y2={s70.y2} stroke="rgba(255,255,255,0.25)" strokeWidth="2.5" />
+                      {/* Needle */}
+                      <line x1="90" y1="90" x2={nx} y2={ny} stroke="white" strokeWidth="2" strokeLinecap="round" />
+                      {/* Center pivot */}
+                      <circle cx="90" cy="90" r="6" fill={color} />
+                      <circle cx="90" cy="90" r="2.5" fill="white" />
+                      {/* Value — below needle range (needle only goes up from y=90) */}
+                      <text x="90" y="124" textAnchor="middle" fill={color} fontSize="22" fontWeight="bold" fontFamily="monospace">{health}%</text>
                     </svg>
                   </div>
-                  <p style={{ color }} className="text-base font-bold mt-1">{label}</p>
-                  <div className="mt-3 flex justify-between text-[10px] text-muted-foreground px-2">
+                  <p style={{ color }} className="text-sm font-semibold -mt-1">{label}</p>
+                  <div className="mt-2 flex justify-between text-[10px] text-muted-foreground px-2">
                     <span>Crítico</span><span>En riesgo</span><span>Óptimo</span>
                   </div>
                 </div>

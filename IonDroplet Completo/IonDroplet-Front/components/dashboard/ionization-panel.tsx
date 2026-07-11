@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { Zap, Power, Clock, RefreshCw, Battery } from "lucide-react"
+import { Zap, Clock, RefreshCw, Battery } from "lucide-react"
 import {
   ResponsiveContainer,
   BarChart,
@@ -101,47 +100,30 @@ export function IonizationPanel({ systemStatus, onToggleIonization }: Ionization
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Estado y boton */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-muted-foreground">Estado del Sistema</p>
-            <div className="mt-1 flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                {isActive && (
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                )}
-                <span
-                  className={cn(
-                    "relative inline-flex h-2 w-2 rounded-full",
-                    isActive ? "bg-primary" : "bg-muted-foreground"
-                  )}
-                />
-              </span>
+        {/* Estado */}
+        <div>
+          <p className="text-xs text-muted-foreground">Estado del Sistema</p>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              {isActive && (
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              )}
               <span
                 className={cn(
-                  "text-sm font-medium",
-                  isActive ? "text-primary" : "text-muted-foreground"
+                  "relative inline-flex h-2 w-2 rounded-full",
+                  isActive ? "bg-primary" : "bg-muted-foreground"
                 )}
-              >
-                {isActive ? "Activo" : "Inactivo"}
-              </span>
-            </div>
+              />
+            </span>
+            <span
+              className={cn(
+                "text-sm font-medium",
+                isActive ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              {isActive ? "Activo" : "Inactivo"}
+            </span>
           </div>
-
-          <Button
-            onClick={onToggleIonization}
-            disabled={!isPowered}
-            size="sm"
-            className={cn(
-              "h-9 gap-1.5 rounded-lg text-xs font-medium transition-all",
-              isActive
-                ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            )}
-          >
-            <Power className="h-3.5 w-3.5" />
-            {isActive ? "Desactivar" : "Activar"}
-          </Button>
         </div>
 
         {!isPowered && (

@@ -114,6 +114,7 @@ export function SensorCard({ type, value, unit, status, thresholds, className }:
 
   const formatValue = (val: number) => {
     if (type === "current") return val.toFixed(2)
+    if (type === "temperature") return val.toFixed(0)
     return val.toFixed(1)
   }
 
